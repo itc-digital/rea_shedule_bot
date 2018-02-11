@@ -43,13 +43,13 @@ faculty_question = [
 session = requests.Session() # Set session
 
 # GET запросы к главной странице
-def get_main_page(session, headers):
+def get_main_page():
     response = session.get(url, headers=headers)
     dom = BeautifulSoup(response.content, 'html.parser')
     return dom
 
 # GET запрос к странице расписания группы group на неделю week
-def get_faculty_page(session, headers, group, week):
+def get_faculty_page(group, week):
     get = {
         'GroupName': group,
         'Week': week
@@ -83,34 +83,59 @@ def parse_select(dom, select_name):
         options_dict.update({option.text: option.get('value')})
     return options_dict
 
-dom = get_main_page(session, headers)
-faculty_dict = parse_select(dom, 'ddlFaculty')
-print('Введи номер твоего факультета:')
+# POST запрос на главную страницу
+# data = {
+#   '__EVENTVALIDATION': ?,
+#   '__LASTFOCUS': ?,
+#   '__VIEWSTATE': ?,
+#   '__VIEWSTATEGENERATOR': ?,
+#   'ddlFaculty': ?,
+#   'ddlBachelor': 'na',
+#   'ddlCourse': 'na',
+#   'ddlGroup': 'na'
+# }
+#
+# target = 'ddlFaculty' - для отправки факультетов
+#   'ddlCourse' - для отправки курсов
+#   'ddlBachelor' - для отправки уровней
+#   'ddlGroup' - для отправки групп
+def post_main_page(data, target):
+    data_default = {
+        '__ASYNCPOST': 'true',
+        '__EVENTARGUMENT': '',
+        '__EVENTTARGET': target,
+        'ctl11': 'upSelectGroup|' + target,
+        'txtGroupName': ''
+    }
+    data_default.update(data)
+    response = session.post(url, data=data_default, headers=headers)
+    dom = BeautifulSoup(response.content, 'html.parser')
+    return dom
+
+dom = get_main_page()   # Получаем главную страницу
+faculty_dict = parse_select(dom, 'ddlFaculty')  # Собираем факультеты
+print('Введи номер твоего факультета:') # Справшиваем номер факультета
 for index, faculty in enumerate(faculty_question):
     print(index+1, ':', faculty)
 
-faculty_answer = int(input())-1
+faculty_answer = int(input())-1     # Получаем ответ и проверяем
 if (faculty_answer<0) or (faculty_answer>10):
     print('Пошёл на хуй')
     exit()
 
 data = {
-    '__ASYNCPOST': 'true',
-    '__EVENTARGUMENT': '',
-    '__EVENTTARGET': 'ddlFaculty',
     '__EVENTVALIDATION': event_validation(dom),
     '__LASTFOCUS': last_focus(dom),
     '__VIEWSTATE': view_state(dom),
     '__VIEWSTATEGENERATOR': view_state_generator(dom),
-    'ctl11': 'upSelectGroup|ddlFaculty',
     'ddlBachelor': 'na',
     'ddlCourse': 'na',
     'ddlFaculty': faculty_dict[faculty_mask[faculty_answer]],
     'ddlGroup': 'na',
-    'txtGroupName': ''
 }
-response = session.post(url, data=data, headers=headers)
-print(response.text)
+response_course = post_main_page(data, 'ddlFaculty')
+print(response_course)
+
 
 '''
 import requests
