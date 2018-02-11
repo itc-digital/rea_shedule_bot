@@ -1,8 +1,7 @@
 import requests
-from urllib.parse import urlencode, quote_plus
 from bs4 import BeautifulSoup
 
-headers = {
+HEADERS = {
     'Host': 'rasp.rea.ru',
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0',
     'Accept-Encoding': 'gzip, deflate',
@@ -12,89 +11,41 @@ headers = {
     'Cache-Control': 'no-cache',
     'Referer': 'https://rasp.rea.ru/'
 }
-url = 'https://rasp.rea.ru/default'
-faculty_mask = [
-    'факультет "Международная школа бизнеса и мировой экономики"',
-    'факультет "Экономики и права"',
-    'факультет гостинично-ресторанной, туристической и спортивной индустрии',
-    'факультет маркетинга',
-    'факультет математической экономики, статистики и информатики',
-    'факультет менеджмента',
-    'факультет экономики торговли и товароведения',
-    'финансовый факультет',
-    'факультет дистанционного обучения',
-    'факультет "Плехановская школа бизнеса Integral"',
-    'факультет бизнеса "КАПИТАНЫ"'
-]
-faculty_question = [
-    'МШБиМЭ',
-    'ФЭП',
-    'ГРТСИ',
-    'ФМа',
-    'ФМЭСИ',
-    'ФМе',
-    'ФЭТТ',
-    'ФФ',
-    'Факультет дистанционного обучения',
-    'Плехановская школа бизнеса Integral',
-    'Факультет бизнеса "КАПИТАНЫ"'
+
+URL = 'https://rasp.rea.ru/default'
+
+ASP_KEYS_TITLES = [
+    '__EVENTVALIDATION',
+    '__LASTFOCUS',
+    '__VIEWSTATE',
+    '__VIEWSTATEGENERATOR',
 ]
 
-session = requests.Session() # Set session
+session = requests.Session()  # Set session
+
 
 # GET запрос к главной странице
 def get_main_page():
-    response = session.get(url, headers=headers)
+    response = session.get(URL, headers=HEADERS)
     dom = BeautifulSoup(response.content, 'html.parser')
     return dom
 
-# GET запрос к странице расписания группы group на неделю week
-def get_faculty_page(group, week):
-    get = {
-        'GroupName': group,
-        'Week': week
-    }
-    response = session.get(url+'?'+urlencode(get, quote_plus), headers=headers)
-    dom = BeautifulSoup(response.content, 'html.parser')
-    return dom
 
-# Получение значений скрытых полей ASP.NET после GET запроса
-def last_focus(dom):
-    return dom.find('input', {'name': '__LASTFOCUS'}).get('value')
+def get_asp_keys(dom, method):
+    asp_keys = {}
+    if method == 'get':
+        for asp_key_title in ASP_KEYS_TITLES:
+            asp_keys[asp_key_title] = dom.find('input', {'name': asp_key_title}).get('value')
+        return asp_keys
+    if method == 'post':
+        start_index = dom.text.find('0|hiddenField|__EVENTTARGET|')
+        array_with_keys = dom.text[start_index:].split('|')
+        for asp_key_title in ASP_KEYS_TITLES:
+            index_of_key = array_with_keys.index(asp_key_title) + 1
+            asp_keys[asp_key_title] = array_with_keys[index_of_key]
+        return asp_keys
+    return
 
-def view_state(dom):
-    return dom.find('input', {'name': '__VIEWSTATE'}).get('value')
-
-def view_state_generator(dom):
-    return dom.find('input', {'name': '__VIEWSTATEGENERATOR'}).get('value')
-
-def event_validation(dom):
-    return dom.find('input', {'name': '__EVENTVALIDATION'}).get('value')
-
-# Получение значений скрытых полей ASP.NET после POST запроса
-def last_focus_post(dom):
-    start_array = dom.text.find('|0|hiddenField|__EVENTTARGET|')
-    array = dom.text[start_array:].split('|')[1:]
-    index = array.index('__LASTFOCUS') + 1
-    return array[index]
-
-def view_state_post(dom):
-    start_array = dom.text.find('|0|hiddenField|__EVENTTARGET|')
-    array = dom.text[start_array:].split('|')[1:]
-    index = array.index('__VIEWSTATE') + 1
-    return array[index]
-
-def view_state_generator_post(dom):
-    start_array = dom.text.find('|0|hiddenField|__EVENTTARGET|')
-    array = dom.text[start_array:].split('|')[1:]
-    index = array.index('__VIEWSTATEGENERATOR') + 1
-    return array[index]
-
-def event_validation_post(dom):
-    start_array = dom.text.find('|0|hiddenField|__EVENTTARGET|')
-    array = dom.text[start_array:].split('|')[1:]
-    index = array.index('__EVENTVALIDATION') + 1
-    return array[index]
 
 # Создание словаря из:
 # Факультетов - 'ddlFaculty'
@@ -108,22 +59,7 @@ def parse_select(dom, select_name):
         options_dict.update({option.text: option.get('value')})
     return options_dict
 
-# POST запрос на главную страницу
-# data = {
-#   '__EVENTVALIDATION': ?,
-#   '__LASTFOCUS': ?,
-#   '__VIEWSTATE': ?,
-#   '__VIEWSTATEGENERATOR': ?,
-#   'ddlFaculty': ?,
-#   'ddlBachelor': 'na',
-#   'ddlCourse': 'na',
-#   'ddlGroup': 'na'
-# }
-#
-# target = 'ddlFaculty' - для отправки факультетов
-#   'ddlCourse' - для отправки курсов
-#   'ddlBachelor' - для отправки уровней
-#   'ddlGroup' - для отправки групп
+
 def post_main_page(data, target):
     data_default = {
         '__ASYNCPOST': 'true',
@@ -133,53 +69,49 @@ def post_main_page(data, target):
         'txtGroupName': ''
     }
     data_default.update(data)
-    response = session.post(url, data=data_default, headers=headers)
+    response = session.post(URL, data=data_default, headers=HEADERS)
     dom = BeautifulSoup(response.content, 'html.parser')
     return dom
 
-# Функция спрашивания факультета
-def question_faculty():
-    print('Введи номер твоего факультета:')
-    for index, faculty in enumerate(faculty_question):
-        print(index+1, ':', faculty)
 
-    faculty_answer = int(input())-1     # Получаем ответ и проверяем
-    if (faculty_answer<0) or (faculty_answer>10):
-        return False
-    else:
-        return faculty_answer
-
-# Функция справшивания курса
-def question_course(course_dict):
-    print('Введи номер твоего курса:')
-    sorted_dict = sorted(course_dict.items(), key=lambda x: x[1])
-
-    for course, index in sorted_dict:
-        print(index, ':', course)
-
-    
-if __name__ == "__main__":
+def get_groups(faculty, course, bachelor):
     dom = get_main_page()
     faculty_dict = parse_select(dom, 'ddlFaculty')
-    faculty_answer = question_faculty()
+    asp_keys = get_asp_keys(dom, 'get')
 
     data = {
-        '__EVENTVALIDATION': event_validation(dom),
-        '__LASTFOCUS': last_focus(dom),
-        '__VIEWSTATE': view_state(dom),
-        '__VIEWSTATEGENERATOR': view_state_generator(dom),
         'ddlBachelor': 'na',
         'ddlCourse': 'na',
-        'ddlFaculty': faculty_dict[faculty_mask[faculty_answer]],
+        'ddlFaculty': faculty_dict[faculty],
         'ddlGroup': 'na',
     }
-
+    data.update(asp_keys)
     dom = post_main_page(data, 'ddlFaculty')
     course_dict = parse_select(dom, 'ddlCourse')
-    course_answer = question_course(course_dict)
+    asp_keys = get_asp_keys(dom, 'post')
 
-'''
-print(last_focus_post(dom))
-print(view_state_post(dom))
-print(view_state_generator_post(dom))
-print(event_validation_post(dom))'''
+    data = {
+        'ddlBachelor': 'na',
+        'ddlCourse': course_dict[course],
+        'ddlFaculty': faculty_dict[faculty],
+        'ddlGroup': 'na',
+    }
+    data.update(asp_keys)
+    dom = post_main_page(data, 'ddlCourse')
+    bachelor_dict = parse_select(dom, 'ddlBachelor')
+    asp_keys = get_asp_keys(dom, 'post')
+
+    data = {
+        'ddlBachelor': bachelor_dict[bachelor],
+        'ddlCourse': course_dict[course],
+        'ddlFaculty': faculty_dict[faculty],
+        'ddlGroup': 'na',
+    }
+    data.update(asp_keys)
+    dom = post_main_page(data, 'ddlBachelor')
+    group_dict = parse_select(dom, 'ddlGroup')
+    return group_dict
+
+
+if __name__ == '__main__':
+    get_groups('факультет "Международная школа бизнеса и мировой экономики"','1-й курс','Бакалавр')
