@@ -83,12 +83,14 @@ def parse_select(dom, select_name):
         options_dict.update({option.text: option.get('value')})
     return options_dict
 
+dom = get_main_page(session, headers)
+faculty_dict = parse_select(dom, 'ddlFaculty')
 print('Введи номер твоего факультета:')
-for index, faculty in enumerate(facultyQuestion):
+for index, faculty in enumerate(faculty_question):
     print(index+1, ':', faculty)
 
-facultyAnswer = int(input())-1
-if (facultyAnswer<0) or (facultyAnswer>10):
+faculty_answer = int(input())-1
+if (faculty_answer<0) or (faculty_answer>10):
     print('Пошёл на хуй')
     exit()
 
@@ -96,21 +98,19 @@ data = {
     '__ASYNCPOST': 'true',
     '__EVENTARGUMENT': '',
     '__EVENTTARGET': 'ddlFaculty',
-    '__EVENTVALIDATION': eventValidation,
-    '__LASTFOCUS': lastFocus,
-    '__VIEWSTATE': viewState,
-    '__VIEWSTATEGENERATOR': viewStateGenerator,
+    '__EVENTVALIDATION': event_validation(dom),
+    '__LASTFOCUS': last_focus(dom),
+    '__VIEWSTATE': view_state(dom),
+    '__VIEWSTATEGENERATOR': view_state_generator(dom),
     'ctl11': 'upSelectGroup|ddlFaculty',
     'ddlBachelor': 'na',
     'ddlCourse': 'na',
-    'ddlFaculty': facultyDict[facultyMask[facultyAnswer]],
+    'ddlFaculty': faculty_dict[faculty_mask[faculty_answer]],
     'ddlGroup': 'na',
     'txtGroupName': ''
 }
 response = session.post(url, data=data, headers=headers)
 print(response.text)
-
-
 
 '''
 import requests
@@ -158,3 +158,4 @@ data = {'__ASYNCPOST': 'true',
 
 response = session.post(url, data=data, headers=headers)
 print(response.text)
+'''
