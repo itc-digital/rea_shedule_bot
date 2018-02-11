@@ -42,7 +42,7 @@ faculty_question = [
 
 session = requests.Session() # Set session
 
-# GET запросы к главной странице
+# GET запрос к главной странице
 def get_main_page():
     response = session.get(url, headers=headers)
     dom = BeautifulSoup(response.content, 'html.parser')
@@ -70,6 +70,31 @@ def view_state_generator(dom):
 
 def event_validation(dom):
     return dom.find('input', {'name': '__EVENTVALIDATION'}).get('value')
+
+# Получение значений скрытых полей ASP.NET после POST запроса
+def last_focus_post(dom):
+    start_array = dom.text.find('|0|hiddenField|__EVENTTARGET|')
+    array = dom.text[start_array:].split('|')[1:]
+    index = array.index('__LASTFOCUS') + 1
+    return array[index]
+
+def view_state_post(dom):
+    start_array = dom.text.find('|0|hiddenField|__EVENTTARGET|')
+    array = dom.text[start_array:].split('|')[1:]
+    index = array.index('__VIEWSTATE') + 1
+    return array[index]
+
+def view_state_generator_post(dom):
+    start_array = dom.text.find('|0|hiddenField|__EVENTTARGET|')
+    array = dom.text[start_array:].split('|')[1:]
+    index = array.index('__VIEWSTATEGENERATOR') + 1
+    return array[index]
+
+def event_validation_post(dom):
+    start_array = dom.text.find('|0|hiddenField|__EVENTTARGET|')
+    array = dom.text[start_array:].split('|')[1:]
+    index = array.index('__EVENTVALIDATION') + 1
+    return array[index]
 
 # Создание словаря из:
 # Факультетов - 'ddlFaculty'
@@ -124,19 +149,37 @@ def question_faculty():
     else:
         return faculty_answer
 
-dom = get_main_page()
-faculty_dict = parse_select(dom, 'ddlFaculty')
-faculty_answer = question_faculty()
+# Функция справшивания курса
+def question_course(course_dict):
+    print('Введи номер твоего курса:')
+    sorted_dict = sorted(course_dict.items(), key=lambda x: x[1])
 
-data = {
-    '__EVENTVALIDATION': event_validation(dom),
-    '__LASTFOCUS': last_focus(dom),
-    '__VIEWSTATE': view_state(dom),
-    '__VIEWSTATEGENERATOR': view_state_generator(dom),
-    'ddlBachelor': 'na',
-    'ddlCourse': 'na',
-    'ddlFaculty': faculty_dict[faculty_mask[faculty_answer]],
-    'ddlGroup': 'na',
-}
-response_course = post_main_page(data, 'ddlFaculty')
-print(response_course)
+    for course, index in sorted_dict:
+        print(index, ':', course)
+
+    
+if __name__ == "__main__":
+    dom = get_main_page()
+    faculty_dict = parse_select(dom, 'ddlFaculty')
+    faculty_answer = question_faculty()
+
+    data = {
+        '__EVENTVALIDATION': event_validation(dom),
+        '__LASTFOCUS': last_focus(dom),
+        '__VIEWSTATE': view_state(dom),
+        '__VIEWSTATEGENERATOR': view_state_generator(dom),
+        'ddlBachelor': 'na',
+        'ddlCourse': 'na',
+        'ddlFaculty': faculty_dict[faculty_mask[faculty_answer]],
+        'ddlGroup': 'na',
+    }
+
+    dom = post_main_page(data, 'ddlFaculty')
+    course_dict = parse_select(dom, 'ddlCourse')
+    course_answer = question_course(course_dict)
+
+'''
+print(last_focus_post(dom))
+print(view_state_post(dom))
+print(view_state_generator_post(dom))
+print(event_validation_post(dom))'''
