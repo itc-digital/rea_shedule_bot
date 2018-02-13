@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 
 REA_HREF = 'https://rasp.rea.ru/default'
 
+
 def parse_day(rows):
     day_title = rows[0].findAll("td")[1].font.b.contents[0]
     serialized_day = {}
@@ -23,11 +24,7 @@ def parse_shedule(group, week):
     shedule_table = soup.find(id="ttWeek_tblTime").findAll("tr")
     serialized_week = {}
     for day_number in range(6):
-        current_day = shedule_table[day_number*9:day_number*9+9]
+        current_day = shedule_table[day_number * 9:day_number * 9 + 9]
         day_title, serialized_day = parse_day(current_day)
         serialized_week[day_title] = serialized_day
     return serialized_week
-
-
-if __name__ == '__main__':
-    parse_shedule('291Д-07ИБ/16',6)
