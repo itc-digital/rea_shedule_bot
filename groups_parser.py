@@ -74,44 +74,27 @@ def post_main_page(data, target):
     return dom
 
 
-def get_groups(faculty, course, bachelor):
-    dom = get_main_page()
-    faculty_dict = parse_select(dom, 'ddlFaculty')
-    asp_keys = get_asp_keys(dom, 'get')
-
+def parse_options(faculty='na', course='na', bachelor='na'):
+    first_action, second_action = action_decoder(faculty, course, bachelor)
+    base_dom = get_main_page()
+    asp_keys = get_asp_keys(base_dom, 'get')
     data = {
-        'ddlBachelor': 'na',
-        'ddlCourse': 'na',
-        'ddlFaculty': faculty_dict[faculty],
+        'ddlBachelor': bachelor,
+        'ddlCourse': course,
+        'ddlFaculty': faculty,
         'ddlGroup': 'na',
     }
     data.update(asp_keys)
-    dom = post_main_page(data, 'ddlFaculty')
-    course_dict = parse_select(dom, 'ddlCourse')
-    asp_keys = get_asp_keys(dom, 'post')
-
-    data = {
-        'ddlBachelor': 'na',
-        'ddlCourse': course_dict[course],
-        'ddlFaculty': faculty_dict[faculty],
-        'ddlGroup': 'na',
-    }
-    data.update(asp_keys)
-    dom = post_main_page(data, 'ddlCourse')
-    bachelor_dict = parse_select(dom, 'ddlBachelor')
-    asp_keys = get_asp_keys(dom, 'post')
-
-    data = {
-        'ddlBachelor': bachelor_dict[bachelor],
-        'ddlCourse': course_dict[course],
-        'ddlFaculty': faculty_dict[faculty],
-        'ddlGroup': 'na',
-    }
-    data.update(asp_keys)
-    dom = post_main_page(data, 'ddlBachelor')
-    group_dict = parse_select(dom, 'ddlGroup')
-    return group_dict
+    dom = post_main_page(data, first_action)
+    options_dict = parse_select(dom, second_action)
+    return options_dict
 
 
-if __name__ == '__main__':
-    get_groups('факультет "Международная школа бизнеса и мировой экономики"','1-й курс','Бакалавр')
+def action_decoder(faculty='na', course='na', bachelor='na'):
+    if bachelor != 'na':
+        return 'ddlBachelor', 'ddlGroups'
+    if course != 'na':
+        return 'ddlCourse', 'ddlBachelor'
+    if faculty != 'na':
+        return 'ddlFaculty', 'ddlCourse'
+    return
