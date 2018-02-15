@@ -4,6 +4,10 @@ import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 import groups_parser
 
+import json
+import os
+
+
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -13,7 +17,22 @@ logger = logging.getLogger(__name__)
 
 FACULTY, COURSE, BACHELOR, GROUP, FINISH_RECORDING = range(5)
 
-USER = {}
+PATH = 'db.json'
+
+
+def load_data(path):
+    if not os.path.exists(path):
+        return None
+    with open(path, mode='r', encoding='utf-8') as infile:
+        read_data = json.load(infile)
+        return read_data
+
+
+def write_data(path, data):
+    if not os.path.exists(path):
+        return None
+    with open(path, mode='w', encoding='utf-8') as outfile:
+        json.dump(data, outfile)
 
 
 def create_buttons_markup(options):
@@ -28,14 +47,134 @@ def create_buttons_markup(options):
 
 
 def start(bot, update):
-    global USER
-    USER['chat_id'] = update.message.chat.id
     reply_keyboard = [['Boy', 'Girl', 'Other']]
     update.message.reply_text(
         'Привет! Сейчас мы попробуем понять в какой ты группе.'
         'Скажи, как мне к тебе обращаться?',
         reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
     return FACULTY
+
+
+def get_faculty(bot, update):
+    global PATH
+    chat_id = update.message.chat.id
+    name = update.message.text
+    data = load_data(PATH)
+    user = {}
+    course_dict, asp_keys = groups_parser.parse_options_and_keys()
+    user['name'] = name
+    user['keys'] = asp_keys
+    data[str(chat_id)] = user
+    write_data(PATH, data)
+    reply_markup = create_buttons_markup(course_dict)
+    reply_text = 'Выбери факультет, на котором ты учишься:'
+    update.message.reply_text(reply_text, reply_markup=reply_markup)
+    return COURSE
+
+
+def get_course(bot, update):
+    global PATH
+    query = update.callback_query
+    chat_id = query.message.chat_id
+    faculty_id = query.data
+    data = load_data(PATH)
+    user = data[str(chat_id)]
+    asp_keys = user['keys']
+    course_dict, asp_keys = groups_parser.parse_options_and_keys(
+        faculty=faculty_id,
+        asp_keys=asp_keys
+    )
+    user['faculty_id'] = faculty_id
+    user['keys'] = asp_keys
+    data[str(chat_id)] = user
+    write_data(PATH, data)
+    reply_markup = create_buttons_markup(course_dict)
+    reply_text = 'Теперь выбери на каком ты курсе:'
+    bot.edit_message_text(
+        text=reply_text,
+        chat_id=query.message.chat_id,
+        message_id=query.message.message_id,
+        reply_markup=reply_markup
+    )
+    return BACHELOR
+
+
+def get_bachelor(bot, update):
+    global PATH
+    query = update.callback_query
+    chat_id = query.message.chat_id
+    course_id = query.data
+    data = load_data(PATH)
+    user = data[str(chat_id)]
+    asp_keys = user['keys']
+    bachelor_dict, asp_keys = groups_parser.parse_options_and_keys(
+        faculty=user['faculty_id'],
+        course=course_id,
+        asp_keys=asp_keys
+    )
+    user['course_id'] = course_id
+    user['keys'] = asp_keys
+    data[str(chat_id)] = user
+    write_data(PATH, data)
+    reply_markup = create_buttons_markup(bachelor_dict)
+    reply_text = 'Теперь выбери тип обучения:'
+    bot.edit_message_text(
+        text=reply_text,
+        chat_id=query.message.chat_id,
+        message_id=query.message.message_id,
+        reply_markup=reply_markup
+    )
+    return GROUP
+
+
+def get_group(bot, update):
+    global PATH
+    query = update.callback_query
+    chat_id = query.message.chat_id
+    bachelor_id = query.data
+    data = load_data(PATH)
+    user = data[str(chat_id)]
+    asp_keys = user['keys']
+    groups_dict, asp_keys = groups_parser.parse_options_and_keys(
+        faculty=user['faculty_id'],
+        course=user['course_id'],
+        bachelor=bachelor_id,
+        asp_keys=asp_keys
+    )
+    buttons = []
+    for option in groups_dict:
+        buttons.append([InlineKeyboardButton(
+            option,
+            callback_data=option
+        ), ])
+    reply_markup = InlineKeyboardMarkup(buttons)
+    reply_text = 'И наконец из какой ты группы?..'
+    bot.edit_message_text(
+        text=reply_text,
+        chat_id=query.message.chat_id,
+        message_id=query.message.message_id,
+        reply_markup=reply_markup
+    )
+    return FINISH_RECORDING
+
+
+def finish_recording_user(bot, update):
+    global PATH
+    query = update.callback_query
+    chat_id = query.message.chat_id
+    group_title = query.data
+    data = load_data(PATH)
+    user = data[str(chat_id)]
+    user['group_title'] = group_title
+    data[str(chat_id)] = user
+    write_data(PATH, data)
+    reply_text = 'Хорошо, я тебя запомнил!'
+    bot.edit_message_text(
+        text=reply_text,
+        chat_id=query.message.chat_id,
+        message_id=query.message.message_id,
+    )
+    return
 
 
 def help(bot, update):
@@ -51,81 +190,6 @@ def cancel(bot, update):
     logger.info("User %s canceled the conversation.", user.first_name)
     update.message.reply_text('Bye! I hope we can talk again some day.')
     return ConversationHandler.END
-
-
-def get_faculty(bot, update):
-    global USER
-    USER['name'] = update.message.text
-    dom = groups_parser.get_main_page()
-    faculty_dict = groups_parser.parse_select(dom, 'ddlFaculty')
-    reply_markup = create_buttons_markup(faculty_dict)
-    reply_text = 'Выбери факультет, на котором ты учишься:'
-    update.message.reply_text(reply_text, reply_markup=reply_markup)
-    return COURSE
-
-
-def get_course(bot, update):
-    query = update.callback_query
-    global USER
-    USER['faculty_id'] = query.data
-    course_dict = groups_parser.parse_options(
-        faculty=USER['faculty_id'],
-    )
-    reply_markup = create_buttons_markup(course_dict)
-    reply_text = 'Теперь выбери на каком ты курсе:'
-    bot.edit_message_text(
-        text=reply_text,
-        chat_id=query.message.chat_id,
-        message_id=query.message.message_id,
-        reply_markup=reply_markup
-    )
-    return BACHELOR
-
-
-def get_bachelor(bot, update):
-    query = update.callback_query
-    global USER
-    USER['course_id'] = query.data
-    bachelor_dict = groups_parser.parse_options(
-        faculty=USER['faculty_id'],
-        course=USER['course_id']
-    )
-    reply_markup = create_buttons_markup(bachelor_dict)
-    reply_text = 'Теперь выбери тип обучения:'
-    bot.edit_message_text(
-        text=reply_text,
-        chat_id=query.message.chat_id,
-        message_id=query.message.message_id,
-        reply_markup=reply_markup
-    )
-    return GROUP
-
-
-def get_group(bot, update):
-    query = update.callback_query
-    global USER
-    USER['bachelor_id'] = query.data
-    groups_dict = groups_parser.parse_options(
-        faculty=USER['faculty_id'],
-        course=USER['course_id'],
-        bachelor=USER['bachelor_id'],
-    )
-    reply_markup = create_buttons_markup(groups_dict)
-    reply_text = 'И наконец из какой ты группы?..'
-    bot.edit_message_text(
-        text=reply_text,
-        chat_id=query.message.chat_id,
-        message_id=query.message.message_id,
-        reply_markup=reply_markup
-    )
-    return FINISH_RECORDING
-
-
-def finish_recording_user(bot, update):
-    query = update.callback_query
-    global USER
-    USER['course_id'] = query.data
-    return
 
 
 if __name__ == '__main__':

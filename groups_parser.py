@@ -74,10 +74,13 @@ def post_main_page(data, target):
     return dom
 
 
-def parse_options(faculty='na', course='na', bachelor='na'):
+def parse_options_and_keys(faculty='na', course='na', bachelor='na', asp_keys=None):
     first_action, second_action = action_decoder(faculty, course, bachelor)
-    base_dom = get_main_page()
-    asp_keys = get_asp_keys(base_dom, 'get')
+    if not asp_keys:
+        dom = get_main_page()
+        options_dict = parse_select(dom, second_action)
+        asp_keys = get_asp_keys(dom, 'get')
+        return options_dict, asp_keys
     data = {
         'ddlBachelor': bachelor,
         'ddlCourse': course,
@@ -86,15 +89,16 @@ def parse_options(faculty='na', course='na', bachelor='na'):
     }
     data.update(asp_keys)
     dom = post_main_page(data, first_action)
+    asp_keys = get_asp_keys(dom, 'post')
     options_dict = parse_select(dom, second_action)
-    return options_dict
+    return options_dict, asp_keys
 
 
 def action_decoder(faculty='na', course='na', bachelor='na'):
     if bachelor != 'na':
-        return 'ddlBachelor', 'ddlGroups'
+        return 'ddlBachelor', 'ddlGroup'
     if course != 'na':
         return 'ddlCourse', 'ddlBachelor'
     if faculty != 'na':
         return 'ddlFaculty', 'ddlCourse'
-    return
+    return None, 'ddlFaculty'
