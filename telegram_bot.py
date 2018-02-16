@@ -1,4 +1,4 @@
-from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
+from telegram.ext import (Updater, CommandHandler,
                           ConversationHandler, CallbackQueryHandler)
 import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
@@ -15,7 +15,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-FACULTY, COURSE, BACHELOR, GROUP, FINISH_RECORDING = range(5)
+FACULTY, COURSE, BACHELOR, GROUP, FINISH_RECORDING, DEFAULT = range(6)
 
 PATH = 'db.json'
 
@@ -46,29 +46,21 @@ def create_buttons_markup(options):
     return reply_markup
 
 
-def start(bot, update):
-    reply_keyboard = [['Boy', 'Girl', 'Other']]
-    update.message.reply_text(
-        'Привет! Сейчас мы попробуем понять в какой ты группе.'
-        'Скажи, как мне к тебе обращаться?',
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
-    return FACULTY
-
-
 def get_faculty(bot, update):
     global PATH
     chat_id = update.message.chat.id
-    name = update.message.text
     data = load_data(PATH)
     user = {}
     course_dict, asp_keys = groups_parser.parse_options_and_keys()
-    user['name'] = name
     user['keys'] = asp_keys
     data[str(chat_id)] = user
     write_data(PATH, data)
     reply_markup = create_buttons_markup(course_dict)
     reply_text = 'Выбери факультет, на котором ты учишься:'
-    update.message.reply_text(reply_text, reply_markup=reply_markup)
+    update.message.reply_text(
+        reply_text,
+        reply_markup=reply_markup
+    )
     return COURSE
 
 
@@ -168,13 +160,24 @@ def finish_recording_user(bot, update):
     user['group_title'] = group_title
     data[str(chat_id)] = user
     write_data(PATH, data)
-    reply_text = 'Хорошо, я тебя запомнил!'
-    bot.edit_message_text(
-        text=reply_text,
+    reply_text = 'Хорошо, я тебя запомнил! Ты из {}'.format((group_title),)
+    default_reply_keyboard = [
+        ['Пары сегодня', 'Пары завтра'],
+        ['Расписание на эту неделю', 'Расписание на следущую неделю'],
+        ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'],
+        ['Свободные аудитории', 'Поиск препода'],
+    ]
+    default_markup = ReplyKeyboardMarkup(default_reply_keyboard)
+    bot.delete_message(
         chat_id=query.message.chat_id,
-        message_id=query.message.message_id,
+        message_id=query.message.message_id
     )
-    return
+    bot.send_message(
+        chat_id=query.message.chat_id,
+        text=reply_text,
+        reply_markup=default_markup
+    )
+    return DEFAULT
 
 
 def help(bot, update):
@@ -192,24 +195,28 @@ def cancel(bot, update):
     return ConversationHandler.END
 
 
+def default(bot, update):
+    pass
+
+
 if __name__ == '__main__':
     token = ''
     updater = Updater(token)
     dispatcher = updater.dispatcher
-    start_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
+    states_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', get_faculty)],
         states={
-            FACULTY: [MessageHandler(Filters.text, get_faculty)],
             COURSE: [CallbackQueryHandler(get_course)],
             BACHELOR: [CallbackQueryHandler(get_bachelor)],
             GROUP: [CallbackQueryHandler(get_group)],
             FINISH_RECORDING: [CallbackQueryHandler(finish_recording_user)],
+            DEFAULT: [CallbackQueryHandler(default)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
         allow_reentry=True,
+        per_message=False
     )
-
-    dispatcher.add_handler(start_handler)
+    dispatcher.add_handler(states_handler)
     dispatcher.add_handler(CommandHandler("help", help))
     dispatcher.add_error_handler(error)
     updater.start_polling()
