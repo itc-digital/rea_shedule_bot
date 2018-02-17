@@ -1,8 +1,9 @@
-from telegram.ext import (Updater, CommandHandler,
+from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
                           ConversationHandler, CallbackQueryHandler)
 import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 import groups_parser
+import shedule_parser
 
 import json
 import os
@@ -46,6 +47,29 @@ def create_buttons_markup(options):
     return reply_markup
 
 
+def create_schedule_markups(schedule):
+    markups = []
+    for day in schedule:
+        buttons = []
+        buttons.append([InlineKeyboardButton(
+            day,
+            callback_data='#'
+        ), ])
+        for lesson in schedule[day]:
+            lesson_markup_text = schedule[day][lesson] or '---'
+            buttons.append([
+                InlineKeyboardButton(
+                    lesson,
+                    callback_data='#'),
+                InlineKeyboardButton(
+                    lesson_markup_text,
+                    callback_data='#'),
+            ])
+        markup = InlineKeyboardMarkup(buttons)
+        markups.append(markup)
+    return markups
+
+
 def get_faculty(bot, update):
     global PATH
     chat_id = update.message.chat.id
@@ -84,7 +108,7 @@ def get_course(bot, update):
     reply_text = 'Теперь выбери на каком ты курсе:'
     bot.edit_message_text(
         text=reply_text,
-        chat_id=query.message.chat_id,
+        chat_id=chat_id,
         message_id=query.message.message_id,
         reply_markup=reply_markup
     )
@@ -112,7 +136,7 @@ def get_bachelor(bot, update):
     reply_text = 'Теперь выбери тип обучения:'
     bot.edit_message_text(
         text=reply_text,
-        chat_id=query.message.chat_id,
+        chat_id=chat_id,
         message_id=query.message.message_id,
         reply_markup=reply_markup
     )
@@ -143,7 +167,7 @@ def get_group(bot, update):
     reply_text = 'И наконец из какой ты группы?..'
     bot.edit_message_text(
         text=reply_text,
-        chat_id=query.message.chat_id,
+        chat_id=chat_id,
         message_id=query.message.message_id,
         reply_markup=reply_markup
     )
@@ -169,11 +193,11 @@ def finish_recording_user(bot, update):
     ]
     default_markup = ReplyKeyboardMarkup(default_reply_keyboard)
     bot.delete_message(
-        chat_id=query.message.chat_id,
+        chat_id=chat_id,
         message_id=query.message.message_id
     )
     bot.send_message(
-        chat_id=query.message.chat_id,
+        chat_id=chat_id,
         text=reply_text,
         reply_markup=default_markup
     )
@@ -196,7 +220,37 @@ def cancel(bot, update):
 
 
 def default(bot, update):
-    pass
+    global PATH
+    # import pdb; pdb.set_trace()
+    chat_id = update.message.chat_id
+    choise = update.message.text
+    data = load_data(PATH)
+    user = data[str(chat_id)]
+    group_title = user['group_title']
+    if choise == 'Расписание на эту неделю':
+        schedule = shedule_parser.parse_shedule(group_title, 7)
+    if choise == 'Расписание на следущую неделю':
+        schedule = shedule_parser.parse_shedule(group_title, 8)
+    markups = create_schedule_markups(schedule)
+    for markup in markups:
+        bot.send_message(
+            chat_id=chat_id,
+            text='───────────────────────────────────────────────────',
+            reply_markup=markup
+        )
+    default_reply_keyboard = [
+        ['Пары сегодня', 'Пары завтра'],
+        ['Расписание на эту неделю', 'Расписание на следущую неделю'],
+        ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'],
+        ['Свободные аудитории', 'Поиск препода'],
+    ]
+    default_markup = ReplyKeyboardMarkup(default_reply_keyboard)
+    bot.send_message(
+        chat_id=chat_id,
+        text='───────────────────────────────────────────────────',
+        reply_markup=default_markup
+    )
+    return DEFAULT
 
 
 if __name__ == '__main__':
@@ -210,7 +264,7 @@ if __name__ == '__main__':
             BACHELOR: [CallbackQueryHandler(get_bachelor)],
             GROUP: [CallbackQueryHandler(get_group)],
             FINISH_RECORDING: [CallbackQueryHandler(finish_recording_user)],
-            DEFAULT: [CallbackQueryHandler(default)],
+            DEFAULT: [MessageHandler(Filters.text, default)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
         allow_reentry=True,
