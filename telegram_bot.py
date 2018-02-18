@@ -328,8 +328,8 @@ if __name__ == '__main__':
     updater = Updater(token)
     updater.start_webhook(
         listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN
+        port=port,
+        url_path=token
     )
     updater.bot.set_webhook("https://{0}.herokuapp.com/{1}".format(appname, token))
     dispatcher = updater.dispatcher
