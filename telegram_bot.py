@@ -343,8 +343,7 @@ if __name__ == '__main__':
             DEFAULT: [MessageHandler(Filters.text, default)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
-        allow_reentry=True,
-        per_message=False
+        allow_reentry=True
     )
     dispatcher.add_handler(states_handler)
     dispatcher.add_handler(CommandHandler("help", help))
