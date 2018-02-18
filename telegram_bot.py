@@ -165,7 +165,7 @@ def finish_recording_user(bot, update):
     default_reply_keyboard = [
         ['Пары сегодня', 'Пары завтра'],
         ['Расписание на эту неделю', 'Расписание на следущую неделю'],
-        ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'],
+        ['пн', 'вт', 'ср', 'чт', 'пт', 'сб'],
         ['Свободные аудитории', 'Поиск препода'],
     ]
     default_markup = ReplyKeyboardMarkup(default_reply_keyboard)
@@ -196,6 +196,34 @@ def cancel(bot, update):
     return ConversationHandler.END
 
 
+def get_schedule_considering_choise(group_title, choise):
+    now = datetime.datetime.now()
+    if choise == 'Пары сегодня':
+        pass
+    if choise == 'Пары завтра':
+        pass
+    if choise == 'Расписание на эту неделю':
+        pass
+    if choise == 'Расписание на следущую неделю':
+        pass
+    if choise == 'пн':
+        pass
+    if choise == 'вт':
+        pass
+    if choise == 'ср':
+        pass
+    if choise == 'чт':
+        pass
+    if choise == 'пт':
+        pass
+    if choise == 'сб':
+        pass
+    if choise == 'Свободные аудитории':
+        pass
+    if choise == 'Поиск препода':
+        pass
+
+
 def default(bot, update):
     global PATH
     # import pdb; pdb.set_trace()
@@ -204,34 +232,24 @@ def default(bot, update):
     data = load_data(PATH)
     user = data[str(chat_id)]
     group_title = user['group_title']
-    if choise == 'Расписание на эту неделю':
-        schedule = shedule_parser.parse_shedule(group_title, 7)
-    if choise == 'Расписание на следущую неделю':
-        schedule = shedule_parser.parse_shedule(group_title, 8)
-    markups = create_schedule_markups(schedule)
-    for markup in markups:
-        bot.send_message(
-            chat_id=chat_id,
-            text='───────────────────────────────────────────────────',
-            reply_markup=markup
-        )
+    schedule = get_schedule_considering_choise(group_title, choise)
     default_reply_keyboard = [
         ['Пары сегодня', 'Пары завтра'],
         ['Расписание на эту неделю', 'Расписание на следущую неделю'],
-        ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'],
+        ['пн', 'вт', 'ср', 'чт', 'пт', 'сб'],
         ['Свободные аудитории', 'Поиск препода'],
     ]
     default_markup = ReplyKeyboardMarkup(default_reply_keyboard)
     bot.send_message(
         chat_id=chat_id,
-        text='───────────────────────────────────────────────────',
+        text=schedule,
         reply_markup=default_markup
     )
     return DEFAULT
 
 
 if __name__ == '__main__':
-    token = ''
+    token = '528727943:AAFkFyPPiqr_raxQjTrXSg83boUsSD8yw3U'
     updater = Updater(token)
     dispatcher = updater.dispatcher
     states_handler = ConversationHandler(
