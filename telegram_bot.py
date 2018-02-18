@@ -221,7 +221,7 @@ def get_wrapped_schedule_considering_choise(group_title, choise):
         schedule = shedule_parser.parse_schedule(
             group_title,
             current_week
-        )[current_day_of_the_week]
+        )[current_day_of_the_week % 7]
         wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'Пары завтра':
         schedule = shedule_parser.parse_schedule(
