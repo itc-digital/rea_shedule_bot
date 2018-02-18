@@ -47,29 +47,6 @@ def create_buttons_markup(options):
     return reply_markup
 
 
-def create_schedule_markups(schedule):
-    markups = []
-    for day in schedule:
-        buttons = []
-        buttons.append([InlineKeyboardButton(
-            day,
-            callback_data='#'
-        ), ])
-        for lesson in schedule[day]:
-            lesson_markup_text = schedule[day][lesson] or '---'
-            buttons.append([
-                InlineKeyboardButton(
-                    lesson,
-                    callback_data='#'),
-                InlineKeyboardButton(
-                    lesson_markup_text,
-                    callback_data='#'),
-            ])
-        markup = InlineKeyboardMarkup(buttons)
-        markups.append(markup)
-    return markups
-
-
 def get_faculty(bot, update):
     global PATH
     chat_id = update.message.chat.id
