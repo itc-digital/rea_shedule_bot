@@ -4,7 +4,9 @@ import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 import groups_parser
 import shedule_parser
+import schedule_wrappers
 
+import datetime
 import json
 import os
 
@@ -166,7 +168,6 @@ def finish_recording_user(bot, update):
         ['Пары сегодня', 'Пары завтра'],
         ['Расписание на эту неделю', 'Расписание на следущую неделю'],
         ['пн', 'вт', 'ср', 'чт', 'пт', 'сб'],
-        ['Свободные аудитории', 'Поиск препода'],
     ]
     default_markup = ReplyKeyboardMarkup(default_reply_keyboard)
     bot.delete_message(
@@ -196,32 +197,87 @@ def cancel(bot, update):
     return ConversationHandler.END
 
 
-def get_schedule_considering_choise(group_title, choise):
+def get_current_week():
     now = datetime.datetime.now()
+    timetuple = now.timetuple()
+    days_this_year = timetuple.tm_yday - 1
+    current_week = (days_this_year // 7) + 1
+    return current_week
+
+
+def get_current_day_of_the_week():
+    now = datetime.datetime.now()
+    timetuple = now.timetuple()
+    current_day_of_the_week = timetuple.tm_wday
+    return current_day_of_the_week
+
+
+def get_wrapped_schedule_considering_choise(group_title, choise):
+    current_week = get_current_week()
+    current_day_of_the_week = get_current_day_of_the_week()
+
+    schedule = []
     if choise == 'Пары сегодня':
-        pass
+        schedule = shedule_parser.parse_schedule(
+            group_title,
+            current_week
+        )[current_day_of_the_week]
+        wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'Пары завтра':
-        pass
+        schedule = shedule_parser.parse_schedule(
+            group_title,
+            current_week
+        )[(current_day_of_the_week + 1) % 7]
+        wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'Расписание на эту неделю':
-        pass
+        schedule = shedule_parser.parse_schedule(
+            group_title,
+            current_week
+        )
+        wrapped_schedule = schedule_wrappers.wrap_schedule_week(schedule)
     if choise == 'Расписание на следущую неделю':
-        pass
+        schedule = shedule_parser.parse_schedule(
+            group_title,
+            current_week + 1
+        )
+        wrapped_schedule = schedule_wrappers.wrap_schedule_week(schedule)
     if choise == 'пн':
-        pass
+        schedule = shedule_parser.parse_schedule(
+            group_title,
+            current_week
+        )[0]
+        wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'вт':
-        pass
+        schedule = shedule_parser.parse_schedule(
+            group_title,
+            current_week
+        )[1]
+        wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'ср':
-        pass
+        schedule = shedule_parser.parse_schedule(
+            group_title,
+            current_week
+        )[2]
+        wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'чт':
-        pass
+        schedule = shedule_parser.parse_schedule(
+            group_title,
+            current_week
+        )[3]
+        wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'пт':
-        pass
+        schedule = shedule_parser.parse_schedule(
+            group_title,
+            current_week
+        )[4]
+        wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'сб':
-        pass
-    if choise == 'Свободные аудитории':
-        pass
-    if choise == 'Поиск препода':
-        pass
+        schedule = shedule_parser.parse_schedule(
+            group_title,
+            current_week
+        )[5]
+        wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
+    return wrapped_schedule or None
 
 
 def default(bot, update):
@@ -232,25 +288,50 @@ def default(bot, update):
     data = load_data(PATH)
     user = data[str(chat_id)]
     group_title = user['group_title']
-    schedule = get_schedule_considering_choise(group_title, choise)
+    wrapped_schedule = get_wrapped_schedule_considering_choise(group_title, choise)
+    if not wrapped_schedule:
+        default_reply_keyboard = [
+            ['Пары сегодня', 'Пары завтра'],
+            ['Расписание на эту неделю', 'Расписание на следущую неделю'],
+            ['пн', 'вт', 'ср', 'чт', 'пт', 'сб'],
+        ]
+        default_markup = ReplyKeyboardMarkup(default_reply_keyboard)
+        bot.send_message(
+            chat_id=chat_id,
+            text='Прости, но у меня что-то не получилось',
+            reply_markup=default_markup
+        )
+        return DEFAULT
+    for wrapped_day in wrapped_schedule:
+            bot.send_message(
+                chat_id=chat_id,
+                text=wrapped_day[0],
+            )
     default_reply_keyboard = [
         ['Пары сегодня', 'Пары завтра'],
         ['Расписание на эту неделю', 'Расписание на следущую неделю'],
         ['пн', 'вт', 'ср', 'чт', 'пт', 'сб'],
-        ['Свободные аудитории', 'Поиск препода'],
     ]
     default_markup = ReplyKeyboardMarkup(default_reply_keyboard)
     bot.send_message(
         chat_id=chat_id,
-        text=schedule,
+        text='Чем еще я могу помочь?',
         reply_markup=default_markup
     )
     return DEFAULT
 
 
 if __name__ == '__main__':
-    token = '528727943:AAFkFyPPiqr_raxQjTrXSg83boUsSD8yw3U'
+    token = os.environ['TOKEN']
+    port = int(os.environ.get('PORT', '8443'))
+    appname = os.environ['APPNAME']
     updater = Updater(token)
+    updater.start_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN
+    )
+    updater.bot.set_webhook("https://{0}.herokuapp.com/{1}".format(appname, token))
     dispatcher = updater.dispatcher
     states_handler = ConversationHandler(
         entry_points=[CommandHandler('start', get_faculty)],
