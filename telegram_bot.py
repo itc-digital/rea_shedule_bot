@@ -285,6 +285,8 @@ def default(bot, update):
     # import pdb; pdb.set_trace()
     chat_id = update.message.chat_id
     choise = update.message.text
+    if choise == '/start':
+        get_faculty(bot, update)
     data = load_data(PATH)
     user = data[str(chat_id)]
     group_title = user['group_title']
@@ -345,6 +347,7 @@ if __name__ == '__main__':
         fallbacks=[CommandHandler('cancel', cancel)],
         allow_reentry=True
     )
+    # TODO if user in db
     dispatcher.add_handler(MessageHandler(
         Filters.text,
         default
