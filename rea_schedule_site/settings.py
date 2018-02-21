@@ -145,7 +145,7 @@ DJANGO_TELEGRAMBOT = {
                         # NB: if use polling you must provide to run
                         # a management command that starts a worker
 
-    'WEBHOOK_SITE': "https://{0}.herokuapp.com".format(
+    'WEBHOOK_SITE': "{0}.herokuapp.com".format(
         TELEGRAM_APPNAME
     ),
     # 'WEBHOOK_PREFIX' : '/prefix', (Optional[str]) # If this value is specified,
