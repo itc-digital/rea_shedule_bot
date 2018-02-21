@@ -149,7 +149,7 @@ DJANGO_TELEGRAMBOT = {
     'WEBHOOK_SITE': "https://{0}.herokuapp.com".format(
         TELEGRAM_APPNAME
     ),
-    'WEBHOOK_PREFIX': '/prefix',  # (Optional[str]) # If this value is specified,
+    # 'WEBHOOK_PREFIX': '/prefix',  (Optional[str]) # If this value is specified,
     # a prefix is added to webhook url
 
     # 'WEBHOOK_CERTIFICATE' : 'cert.pem', # If your site use self-signed
