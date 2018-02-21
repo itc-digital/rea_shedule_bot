@@ -25,7 +25,7 @@ def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
 
 
-if __name__ == '__main__':
+def main():
     dispatcher = DjangoTelegramBot.dispatcher
     states_handler = ConversationHandler(
         entry_points=[CommandHandler('start', states_chain.get_faculty)],

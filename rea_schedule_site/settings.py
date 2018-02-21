@@ -27,7 +27,9 @@ SECRET_KEY = os.environ['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+TELEGRAM_APPNAME = os.environ['APPNAME']
+
+ALLOWED_HOSTS = ['https://{}.herokuapp.com/'.format(TELEGRAM_APPNAME)]
 
 
 # Application definition
@@ -135,9 +137,6 @@ STATICFILES_STORAGE = 'whitenoise.django.GzipManifestStaticFilesStorage'
 TELEGRAM_TOKEN = os.environ['TOKEN']
 
 TELEGRAM_PORT = int(os.environ.get('PORT', '8443'))
-
-TELEGRAM_APPNAME = os.environ['APPNAME']
-
 
 DJANGO_TELEGRAMBOT = {
 
