@@ -36,7 +36,7 @@ def wrap_schedule_with_ascii_lines(schedule):
         wrapped_day = """╔══ {0}
 """.format(day)
         for class_ in schedule[day]:
-            wrapped_class = """╠════════════════════
+            wrapped_class = """╠════════════════
 ║► {0} ({1})
 ║  {2}
 ║  {3}
@@ -49,7 +49,7 @@ def wrap_schedule_with_ascii_lines(schedule):
                 schedule[day][class_]['room']
             )
             wrapped_day += wrapped_class
-        wrapped_day += """╚════════════════════"""
+        wrapped_day += """╚════════════════"""
         wrapped_schedule.append(wrapped_day)
     return wrapped_schedule
 

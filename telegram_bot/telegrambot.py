@@ -1,8 +1,8 @@
-from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
+from telegram.ext import (CommandHandler, MessageHandler, Filters,
                           ConversationHandler, CallbackQueryHandler)
+from django_telegrambot.apps import DjangoTelegramBot
 
 import logging
-import os
 
 import states_chain
 
@@ -26,17 +26,7 @@ def error(bot, update, error):
 
 
 if __name__ == '__main__':
-    token = os.environ['TOKEN']
-    port = int(os.environ.get('PORT', '8443'))
-    appname = os.environ['APPNAME']
-    updater = Updater(token)
-    updater.start_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path=token
-    )
-    updater.bot.set_webhook("https://{0}.herokuapp.com/{1}".format(appname, token))
-    dispatcher = updater.dispatcher
+    dispatcher = DjangoTelegramBot.dispatcher
     states_handler = ConversationHandler(
         entry_points=[CommandHandler('start', states_chain.get_faculty)],
         states={
@@ -57,5 +47,3 @@ if __name__ == '__main__':
     )
     dispatcher.add_handler(CommandHandler("help", help))
     dispatcher.add_error_handler(error)
-    updater.start_polling()
-    updater.idle()

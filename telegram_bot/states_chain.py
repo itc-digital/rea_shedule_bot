@@ -9,6 +9,8 @@ from parsers import shedule_parser
 
 import datetime
 
+from . import models
+
 
 def send_default_markup(bot, chat_id, reply_text):
     default_reply_keyboard = [
@@ -43,7 +45,7 @@ def get_current_day_of_the_week():
 def get_wrapped_schedule_considering_choise(group_title, choise):
     current_week = get_current_week()
     current_day_of_the_week = get_current_day_of_the_week()
-    schedule = []
+    wrapped_schedule = []
     if choise == 'Пары сегодня':
         schedule = shedule_parser.parse_schedule(
             group_title,
@@ -108,9 +110,13 @@ def get_wrapped_schedule_considering_choise(group_title, choise):
 
 
 def get_faculty(bot, update):
-
+    chat_id = update.message.chat.id
+    user = models.TelegramUser().objects.get_or_create(
+        chat_id=chat_id
+    )
     course_dict, asp_keys = groups_parser.parse_options_and_keys()
-
+    user.asp_keys = asp_keys
+    user.save()
     reply_markup = schedule_wrappers.create_buttons_markup(course_dict)
     reply_text = 'Выбери факультет, на котором ты учишься:'
     update.message.reply_text(
@@ -124,12 +130,15 @@ def get_course(bot, update):
     query = update.callback_query
     chat_id = query.message.chat_id
     faculty_id = query.data
-
+    user = models.TelegramUser.objects.get(
+        chat_id=chat_id
+    )
+    user.faculty_id = faculty_id
+    user.save()
     course_dict, asp_keys = groups_parser.parse_options_and_keys(
         faculty=faculty_id,
-        asp_keys=asp_keys
+        asp_keys=user.asp_keys
     )
-
     reply_markup = schedule_wrappers.create_buttons_markup(course_dict)
     reply_text = 'Теперь выбери на каком ты курсе:'
     bot.edit_message_text(
@@ -145,13 +154,16 @@ def get_bachelor(bot, update):
     query = update.callback_query
     chat_id = query.message.chat_id
     course_id = query.data
-
-    bachelor_dict, asp_keys = groups_parser.parse_options_and_keys(
-        faculty=user['faculty_id'],
-        course=course_id,
-        asp_keys=asp_keys
+    user = models.TelegramUser.objects.get(
+        chat_id=chat_id
     )
-
+    user.course_id = course_id
+    user.save()
+    bachelor_dict, asp_keys = groups_parser.parse_options_and_keys(
+        faculty=user.faculty_id,
+        course=course_id,
+        asp_keys=user.asp_keys
+    )
     reply_markup = schedule_wrappers.create_buttons_markup(bachelor_dict)
     reply_text = 'Теперь выбери тип обучения:'
     bot.edit_message_text(
@@ -167,12 +179,14 @@ def get_group(bot, update):
     query = update.callback_query
     chat_id = query.message.chat_id
     bachelor_id = query.data
-
+    user = models.TelegramUser.objects.get(
+        chat_id=chat_id
+    )
     groups_dict, asp_keys = groups_parser.parse_options_and_keys(
-        faculty=user['faculty_id'],
-        course=user['course_id'],
+        faculty=user.faculty_id,
+        course=user.course_id,
         bachelor=bachelor_id,
-        asp_keys=asp_keys
+        asp_keys=user.asp_keys
     )
     buttons = []
     for option in groups_dict:
@@ -195,9 +209,15 @@ def finish_recording_user(bot, update):
     query = update.callback_query
     chat_id = query.message.chat_id
     group_title = query.data
-
+    user = models.TelegramUser.objects.get(
+        chat_id=chat_id
+    )
+    user.group_title = group_title
+    user.asp_keys = None
+    user.faculty_id = None
+    user.course_id = None
+    user.save()
     reply_text = 'Хорошо, я тебя запомнил! Ты из {}'.format((group_title),)
-
     bot.delete_message(
         chat_id=chat_id,
         message_id=query.message.message_id
@@ -209,7 +229,17 @@ def finish_recording_user(bot, update):
 def default(bot, update):
     chat_id = update.message.chat_id
     choise = update.message.text
-
+    user = models.TelegramUser.objects.filter(
+        chat_id=chat_id
+    )
+    if not user:
+        reply_text = (
+            'Я тебя не помню :с Может, забыл? Не сердись, я еще научусь!'
+            'Чтобы снова со мной познакомиться набери `/start`'
+        )
+        send_default_markup(bot, chat_id, reply_text)
+        return
+    group_title = user.group_title
     wrapped_schedule = get_wrapped_schedule_considering_choise(group_title, choise)
     if not wrapped_schedule:
         reply_text = 'Прости, я тебя не понял... Попробуй воспользоваться кнопками меню?'
