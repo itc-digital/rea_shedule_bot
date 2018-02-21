@@ -121,6 +121,10 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'telegram_bot/static'),
+]
+
 TELEGRAM_TOKEN = os.environ['TOKEN']
 
 TELEGRAM_PORT = int(os.environ.get('PORT', '8443'))
