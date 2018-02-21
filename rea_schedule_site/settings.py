@@ -217,18 +217,8 @@ LOGGING = {
         }
     },
     'handlers': {
-        'file_sys': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'log/debug.log',
-        },
-        'file_adm': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'log/debug_adm.log',
-        },
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
@@ -241,7 +231,7 @@ LOGGING = {
             'propagate': True,
         },
         'admin': {
-            'handlers': ['file_adm'],
+            'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
         },
