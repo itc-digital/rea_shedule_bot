@@ -1,15 +1,15 @@
+import datetime
+import json
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 
-import schedule_wrappers
+from . import parsers
 
-from telegram_bot import COURSE, BACHELOR, GROUP, FINISH_RECORDING, DEFAULT
-
-from parsers import groups_parser
-from parsers import shedule_parser
-
-import datetime
-
+from . import schedule_wrappers
 from . import models
+
+
+FACULTY, COURSE, BACHELOR, GROUP, FINISH_RECORDING, DEFAULT = range(6)
 
 
 def send_default_markup(bot, chat_id, reply_text):
@@ -47,61 +47,61 @@ def get_wrapped_schedule_considering_choise(group_title, choise):
     current_day_of_the_week = get_current_day_of_the_week()
     wrapped_schedule = []
     if choise == 'Пары сегодня':
-        schedule = shedule_parser.parse_schedule(
+        schedule = parsers.schedule_parser.parse_schedule(
             group_title,
             current_week
         )[current_day_of_the_week % 7]
         wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'Пары завтра':
-        schedule = shedule_parser.parse_schedule(
+        schedule = parsers.schedule_parser.parse_schedule(
             group_title,
             current_week
         )[(current_day_of_the_week + 1) % 7]
         wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'Расписание на эту неделю':
-        schedule = shedule_parser.parse_schedule(
+        schedule = parsers.schedule_parser.parse_schedule(
             group_title,
             current_week
         )
         wrapped_schedule = schedule_wrappers.wrap_schedule_week(schedule)
     if choise == 'Расписание на следущую неделю':
-        schedule = shedule_parser.parse_schedule(
+        schedule = parsers.schedule_parser.parse_schedule(
             group_title,
             current_week + 1
         )
         wrapped_schedule = schedule_wrappers.wrap_schedule_week(schedule)
     if choise == 'пн':
-        schedule = shedule_parser.parse_schedule(
+        schedule = parsers.schedule_parser.parse_schedule(
             group_title,
             current_week
         )[0]
         wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'вт':
-        schedule = shedule_parser.parse_schedule(
+        schedule = parsers.schedule_parser.parse_schedule(
             group_title,
             current_week
         )[1]
         wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'ср':
-        schedule = shedule_parser.parse_schedule(
+        schedule = parsers.schedule_parser.parse_schedule(
             group_title,
             current_week
         )[2]
         wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'чт':
-        schedule = shedule_parser.parse_schedule(
+        schedule = parsers.schedule_parser.parse_schedule(
             group_title,
             current_week
         )[3]
         wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'пт':
-        schedule = shedule_parser.parse_schedule(
+        schedule = parsers.schedule_parser.parse_schedule(
             group_title,
             current_week
         )[4]
         wrapped_schedule = [schedule_wrappers.wrap_schedule_with_ascii_lines(schedule)]
     if choise == 'сб':
-        schedule = shedule_parser.parse_schedule(
+        schedule = parsers.schedule_parser.parse_schedule(
             group_title,
             current_week
         )[5]
@@ -111,11 +111,11 @@ def get_wrapped_schedule_considering_choise(group_title, choise):
 
 def get_faculty(bot, update):
     chat_id = update.message.chat.id
-    user = models.TelegramUser().objects.get_or_create(
+    user, created = models.TelegramUser.objects.get_or_create(
         chat_id=chat_id
     )
-    course_dict, asp_keys = groups_parser.parse_options_and_keys()
-    user.asp_keys = asp_keys
+    course_dict, asp_keys = parsers.groups_parser.parse_options_and_keys()
+    user.asp_keys = json.dumps(asp_keys)
     user.save()
     reply_markup = schedule_wrappers.create_buttons_markup(course_dict)
     reply_text = 'Выбери факультет, на котором ты учишься:'
@@ -133,12 +133,14 @@ def get_course(bot, update):
     user = models.TelegramUser.objects.get(
         chat_id=chat_id
     )
+    asp_keys = json.loads(user.asp_keys)
     user.faculty_id = faculty_id
-    user.save()
-    course_dict, asp_keys = groups_parser.parse_options_and_keys(
+    course_dict, asp_keys = parsers.groups_parser.parse_options_and_keys(
         faculty=faculty_id,
-        asp_keys=user.asp_keys
+        asp_keys=asp_keys
     )
+    user.asp_keys = json.dumps(asp_keys)
+    user.save()
     reply_markup = schedule_wrappers.create_buttons_markup(course_dict)
     reply_text = 'Теперь выбери на каком ты курсе:'
     bot.edit_message_text(
@@ -157,13 +159,15 @@ def get_bachelor(bot, update):
     user = models.TelegramUser.objects.get(
         chat_id=chat_id
     )
+    asp_keys = json.loads(user.asp_keys)
     user.course_id = course_id
-    user.save()
-    bachelor_dict, asp_keys = groups_parser.parse_options_and_keys(
+    bachelor_dict, asp_keys = parsers.groups_parser.parse_options_and_keys(
         faculty=user.faculty_id,
         course=course_id,
-        asp_keys=user.asp_keys
+        asp_keys=asp_keys
     )
+    user.asp_keys = json.dumps(asp_keys)
+    user.save()
     reply_markup = schedule_wrappers.create_buttons_markup(bachelor_dict)
     reply_text = 'Теперь выбери тип обучения:'
     bot.edit_message_text(
@@ -182,11 +186,12 @@ def get_group(bot, update):
     user = models.TelegramUser.objects.get(
         chat_id=chat_id
     )
-    groups_dict, asp_keys = groups_parser.parse_options_and_keys(
+    asp_keys = json.loads(user.asp_keys)
+    groups_dict, asp_keys = parsers.groups_parser.parse_options_and_keys(
         faculty=user.faculty_id,
         course=user.course_id,
         bachelor=bachelor_id,
-        asp_keys=user.asp_keys
+        asp_keys=asp_keys
     )
     buttons = []
     for option in groups_dict:
@@ -213,7 +218,7 @@ def finish_recording_user(bot, update):
         chat_id=chat_id
     )
     user.group_title = group_title
-    user.asp_keys = None
+    user.asp_keys = ''
     user.faculty_id = None
     user.course_id = None
     user.save()
@@ -239,6 +244,7 @@ def default(bot, update):
         )
         send_default_markup(bot, chat_id, reply_text)
         return
+    user = user[0]
     group_title = user.group_title
     wrapped_schedule = get_wrapped_schedule_considering_choise(group_title, choise)
     if not wrapped_schedule:

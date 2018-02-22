@@ -1,10 +1,10 @@
-from telegram.ext import (CommandHandler, MessageHandler, Filters,
+from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
                           ConversationHandler, CallbackQueryHandler)
-from django_telegrambot.apps import DjangoTelegramBot
 
 import logging
+import os
 
-import states_chain
+from . import states_chain
 
 
 logging.basicConfig(
@@ -25,8 +25,25 @@ def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
 
 
+def cancel(bot, update):
+    user = update.message.from_user
+    logger.info("User %s canceled the conversation.", user.first_name)
+    update.message.reply_text('Bye! I hope we can talk again some day.')
+    return ConversationHandler.END
+
+
 def main():
-    dispatcher = DjangoTelegramBot.dispatcher
+    token = os.environ['TOKEN']
+    port = 8000
+    appname = os.environ['APPNAME']
+    updater = Updater(token)
+    updater.start_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=token,
+    )
+    updater.bot.set_webhook("https://{0}.herokuapp.com/{1}".format(appname, token))
+    dispatcher = updater.dispatcher
     states_handler = ConversationHandler(
         entry_points=[CommandHandler('start', states_chain.get_faculty)],
         states={
@@ -36,7 +53,8 @@ def main():
             FINISH_RECORDING: [CallbackQueryHandler(states_chain.finish_recording_user)],
             DEFAULT: [MessageHandler(Filters.text, states_chain.default)],
         },
-        allow_reentry=True
+        allow_reentry=True,
+        fallbacks=[CommandHandler('cancel', cancel)],
     )
     dispatcher.add_handler(states_handler)
     dispatcher.add_handler(
@@ -47,3 +65,5 @@ def main():
     )
     dispatcher.add_handler(CommandHandler("help", help))
     dispatcher.add_error_handler(error)
+    updater.start_polling()
+    updater.idle()
