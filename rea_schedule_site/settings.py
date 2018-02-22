@@ -29,7 +29,7 @@ DEBUG = True
 
 TELEGRAM_APPNAME = os.environ['APPNAME']
 
-ALLOWED_HOSTS = ['reascheduletest.herokuapp.com']
+ALLOWED_HOSTS = ['reascheduletest.herokuapp.com', '127.0.0.1']
 
 APPEND_SLASH = False
 
