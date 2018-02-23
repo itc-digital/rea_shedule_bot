@@ -34,7 +34,7 @@ def cancel(bot, update):
 
 def main():
     token = os.environ['TOKEN']
-    port = ps.environ['PORT']
+    port = os.environ['PORT']
     appname = os.environ['APPNAME']
     updater = Updater(token)
     updater.start_webhook(
