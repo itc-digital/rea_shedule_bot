@@ -34,15 +34,7 @@ def cancel(bot, update):
 
 def main():
     token = os.environ['TOKEN']
-    port = int(os.environ['PORT'])
-    appname = os.environ['APPNAME']
     updater = Updater(token)
-    updater.start_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path=token,
-    )
-    updater.bot.set_webhook("https://{0}.herokuapp.com/{1}".format(appname, token))
     dispatcher = updater.dispatcher
     states_handler = ConversationHandler(
         entry_points=[CommandHandler('start', states_chain.get_faculty)],
