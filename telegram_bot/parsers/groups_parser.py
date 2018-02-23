@@ -35,7 +35,9 @@ def get_asp_keys(dom, method):
     asp_keys = {}
     if method == 'get':
         for asp_key_title in ASP_KEYS_TITLES:
-            asp_keys[asp_key_title] = dom.find('input', {'name': asp_key_title}).get('value')
+            asp_keys[asp_key_title] = dom.find(
+                'input', {'name': asp_key_title}
+            ).get('value')
         return asp_keys
     if method == 'post':
         start_index = dom.text.find('0|hiddenField|__EVENTTARGET|')
@@ -47,11 +49,6 @@ def get_asp_keys(dom, method):
     return
 
 
-# Создание словаря из:
-# Факультетов - 'ddlFaculty'
-# Курсов - 'ddlCourse'
-# Уровней - 'ddlBachelor'
-# Групп - 'ddlGroup'
 def parse_select(dom, select_name):
     options = dom.find('select', {'name': select_name}).find_all('option')[1:]
     options_dict = {}

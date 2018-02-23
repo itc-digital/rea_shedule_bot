@@ -26,13 +26,13 @@ def serialize_day(rows):
 
 
 def parse_schedule(group, week):
-    shedule_href = '{0}?GroupName={1}&Week={2}'.format(REA_HREF, group, week)
-    shedule_page = requests.get(shedule_href).text
-    soup = BeautifulSoup(shedule_page, 'html.parser')
-    shedule_table = soup.find(id="ttWeek_tblTime").findAll("tr")
+    schedule_href = '{0}?GroupName={1}&Week={2}'.format(REA_HREF, group, week)
+    schedule_page = requests.get(schedule_href).text
+    soup = BeautifulSoup(schedule_page, 'html.parser')
+    schedule_table = soup.find(id="ttWeek_tblTime").findAll("tr")
     serialized_week = []
     for day_number in range(6):
-        current_day = shedule_table[day_number * 9:day_number * 9 + 9]
+        current_day = schedule_table[day_number * 9:day_number * 9 + 9]
         serialized_day = serialize_day(current_day)
         serialized_week.append(serialized_day)
     return serialized_week
