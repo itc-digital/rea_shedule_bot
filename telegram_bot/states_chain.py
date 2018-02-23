@@ -15,7 +15,7 @@ FACULTY, COURSE, BACHELOR, GROUP, FINISH_RECORDING, DEFAULT = range(6)
 def send_default_markup(bot, chat_id, reply_text):
     default_reply_keyboard = [
         ['Пары сегодня', 'Пары завтра'],
-        ['Расписание на эту неделю', 'Расписание на следущую неделю'],
+        ['Расписание на эту неделю', 'Расписание на следующую неделю'],
         ['пн', 'вт', 'ср', 'чт', 'пт', 'сб'],
     ]
     default_markup = ReplyKeyboardMarkup(default_reply_keyboard)
